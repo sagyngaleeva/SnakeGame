@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Змейка</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #1c1c1c;
+            font-family: 'Arial', sans-serif;
+        }
+
+        canvas {
+            background-color: #333;
+            border: 2px solid #fff;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+        }
+
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        #startButton {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        #startButton:hover {
+            background-color: #218838;
+        }
+
+        #gameOverMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 30px;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <div id="score">Счет: 0</div>
+    <button id="startButton" onclick="initGame()">Начать заново</button>
+    <div id="gameOverMessage">Игра окончена!<br>Ваш счет: 0</div>
+
+    <!-- Подключаем звуки -->
+    <audio id="eatSound" src="eat.mp3"></audio>
+    <audio id="gameOverMusic" src="gameover.mp3"></audio>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const gridSize = 20;
+        const canvasSize = 600;
+        let snake = [];
+        let food = {};
+        let direction = { x: gridSize, y: 0 };
+        let score = 0;
+        let gameInterval;
+        let gameOver = false;
+
+        const eatSound = document.getElementById('eatSound');
+        const gameOverMusic = document.getElementById('gameOverMusic');
+
+        function initGame() {
+            snake = [];
+            for (let i = 2; i >= 0; i--) {
+                snake.push({ x: i * gridSize, y: 0 });
+            }
+            direction = { x: gridSize, y: 0 };
+            score = 0;
+            gameOver = false;
+            document.getElementById('score').textContent = 'Счет: ' + score;
+            document.getElementById('gameOverMessage').style.display = 'none';
+            generateFood();
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(gameLoop, 150);
+            gameOverMusic.pause();
+            gameOverMusic.currentTime = 0; // Сбрасываем музыку
+        }
+
+        function gameLoop() {
+            if (gameOver) return;
+            moveSnake();
+            if (checkCollisions()) {
+                endGame();
+            }
+            if (checkFoodCollision()) {
+                score += 10;
+                document.getElementById('score').textContent = 'Счет: ' + score;
+                eatSound.play();
+                snake.push({}); // Увеличиваем длину змеи
+                generateFood();
+            }
+            drawGame();
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvasSize, canvasSize);
+            snake.forEach(segment => {
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(segment.x, segment.y, gridSize, gridSize);
+            });
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(food.x, food.y, gridSize, gridSize);
+        }
+
+        function moveSnake() {
+            const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+            snake.unshift(head);
+            if (!checkFoodCollision()) {
+                snake.pop(); // Убираем последний элемент, если нет столкновения с едой
+            }
+        }
+
+        function checkCollisions() {
+            const head = snake[0];
+            if (head.x < 0 || head.x >= canvasSize || head.y < 0 || head.y >= canvasSize) {
+                return true;
+            }
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function checkFoodCollision() {
+            const head = snake[0];
+            return head.x === food.x && head.y === food.y;
+        }
+
+        function generateFood() {
+            food.x = Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize;
+            food.y = Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize;
+        }
+
+        function endGame() {
+            clearInterval(gameInterval);
+            gameOver = true;
+            document.getElementById('gameOverMessage').style.display = 'block';
+            document.getElementById('gameOverMessage').innerHTML = `Игра окончена!<br>Ваш счет: ${score}`;
+            gameOverMusic.play();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' && direction.y === 0) {
+                direction = { x: 0, y: -gridSize };
+            } else if (e.key === 'ArrowDown' && direction.y === 0) {
+                direction = { x: 0, y: gridSize };
+            } else if (e.key === 'ArrowLeft' && direction.x === 0) {
+                direction = { x: -gridSize, y: 0 };
+            } else if (e.key === 'ArrowRight' && direction.x === 0) {
+                direction = { x: gridSize, y: 0 };
+            }
+        });
+
+        initGame();
+    </script>
+</body>
+</html>
